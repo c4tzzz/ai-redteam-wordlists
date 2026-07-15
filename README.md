@@ -39,7 +39,7 @@ Outputs: `results.jsonl`, `summary.json`, `summary.md`.
 
 ## Evidence of compromise (concise)
 
-- Local proof run (synthetic canary payloads, local Ollama): `runs/quick-check/summary.json`
+- Local proof run example (synthetic canary payloads, local Ollama).
 - Command used:
 
 ```bash
@@ -55,6 +55,13 @@ Outputs: `results.jsonl`, `summary.json`, `summary.md`.
 
 The matching payload surfaced a synthetic token leak pattern (redacted in model output), with
 `protected_hits: ["token"]` in the generated score.
+
+Re-run locally to regenerate proof artifacts:
+
+```bash
+./wordlist run ollama llama3.2:3b exact_extract \
+  seclists/AI-LLM-Chatbot-Local-Validated-Smoke.txt runs/quick-check --limit 1 --no-progress
+```
 
 ## Safety policy
 
