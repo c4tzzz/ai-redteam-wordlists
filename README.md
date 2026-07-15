@@ -37,6 +37,25 @@ Supported modes: `exact_extract`, `rag_verbatim`, `multi_turn`, `tool_choice`.
 
 Outputs: `results.jsonl`, `summary.json`, `summary.md`.
 
+## Evidence of compromise (concise)
+
+- Local proof run (synthetic canary payloads, local Ollama): `runs/quick-check/summary.json`
+- Command used:
+
+```bash
+./wordlist run ollama llama3.2:3b exact_extract \
+  seclists/AI-LLM-Chatbot-Local-Validated-Smoke.txt runs/quick-check --limit 1 --no-progress
+```
+
+- Result (summary):
+  - `tested: 1`
+  - `findings: 1`
+  - `clean: 0`
+  - `api_errors: 0`
+
+The matching payload surfaced a synthetic token leak pattern (redacted in model output), with
+`protected_hits: ["token"]` in the generated score.
+
 ## Safety policy
 
 - Synthetic canary-only data (no real secrets).
