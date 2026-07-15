@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNNER="${SCRIPT_DIR}/tools/wordlist_runner.py"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  wordlist run <provider> <model> <mode> <wordlist> <out_dir> [options]
+  wordlist (-h|--help)
+
+Args:
+  provider   one of: openrouter, anthropic, gemini, gemini-cli, claude-code, ollama
+  model      provider model name
+  mode       one of: exact_extract, rag_verbatim, multi_turn, tool_choice
+  wordlist   path to .txt payload file
+  out_dir    output folder for results.jsonl and summary files
+
+Options:
+  --ids <ids>         Comma-separated ids or ranges (1-based), ex: 1,4,7-10
+  --limit <N>         Number of first payloads (default: all)
+  --canary <VALUE>    Synthetic canary marker
+  --token <VALUE>     Synthetic token marker
+  --action <VALUE>    Synthetic action marker
+  --max-tokens <N>    Max response tokens (default: 350)
+  --timeout <N>       Request timeout in seconds (default: 180)
+  --num-ctx <N>       Ollama context tokens (default: 8192)
+  --ollama-url <URL>   Ollama endpoint URL
+  --no-color          Disable ANSI colors
+  --no-progress       Disable progress status lines
+
+Examples:
+  ./wordlist run ollama llama3.2:3b exact_extract \
+    seclists/AI-LLM-Chatbot-Local-Validated-Smoke.txt runs/scan-local --ids 1-20
+
+  ./wordlist run openrouter gpt-5.5-medium exact_extract \
+    seclists/AI-LLM-GPT55-Validated-Positive-Leakage.txt runs/gpt55 --limit 5
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ "${1:-}" != "run" ]]; then
+  echo "Missing 'run' command."
+  usage
+  exit 2
+fi
+
+if (( $# < 6 )); then
+  usage
+  exit 2
+fi
+
+shift
+provider=$1
+model=$2
+mode=$3
+wordlist=$4
+out_dir=$5
+shift 5
+
+args=(
+  -p "$provider"
+  -m "$model"
+  -M "$mode"
+  -w "$wordlist"
+  -o "$out_dir"
+)
+
+while (("$#")); do
+  case "$1" in
+    --ids)
+      [[ $# -lt 2 ]] && { echo "--ids requires a value"; exit 2; }
+      args+=( -i "$2" )
+      shift 2
+      ;;
+    --limit)
+      [[ $# -lt 2 ]] && { echo "--limit requires a value"; exit 2; }
+      args+=( -l "$2" )
+      shift 2
+      ;;
+    --canary)
+      [[ $# -lt 2 ]] && { echo "--canary requires a value"; exit 2; }
+      args+=( -C "$2" )
+      shift 2
+      ;;
+    --token)
+      [[ $# -lt 2 ]] && { echo "--token requires a value"; exit 2; }
+      args+=( -T "$2" )
+      shift 2
+      ;;
+    --action)
+      [[ $# -lt 2 ]] && { echo "--action requires a value"; exit 2; }
+      args+=( -A "$2" )
+      shift 2
+      ;;
+    --max-tokens)
+      [[ $# -lt 2 ]] && { echo "--max-tokens requires a value"; exit 2; }
+      args+=( -x "$2" )
+      shift 2
+      ;;
+    --timeout)
+      [[ $# -lt 2 ]] && { echo "--timeout requires a value"; exit 2; }
+      args+=( -u "$2" )
+      shift 2
+      ;;
+    --num-ctx)
+      [[ $# -lt 2 ]] && { echo "--num-ctx requires a value"; exit 2; }
+      args+=( -c "$2" )
+      shift 2
+      ;;
+    --ollama-url)
+      [[ $# -lt 2 ]] && { echo "--ollama-url requires a value"; exit 2; }
+      args+=( -O "$2" )
+      shift 2
+      ;;
+    --no-color)
+      args+=( --no-color )
+      shift
+      ;;
+    --no-progress)
+      args+=( --no-progress )
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+exec python3 "$RUNNER" "${args[@]}"
